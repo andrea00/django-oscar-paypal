@@ -4,11 +4,11 @@ from django.views.decorators.csrf import csrf_exempt
 from paypal.express import views
 
 
-urlpatterns = patterns('',
+urlpatterns = [
     # Views for normal flow that starts on the basket page
     url(r'^redirect/', views.RedirectView.as_view(), name='paypal-redirect'),
     url(r'^preview/(?P<basket_id>\d+)/$',
-        views.SuccessResponseView.as_view(preview=True),
+        views.SuccessResponseView.as_view(),
         name='paypal-success-response'),
     url(r'^cancel/(?P<basket_id>\d+)/$', views.CancelResponseView.as_view(),
         name='paypal-cancel-response'),
@@ -21,4 +21,4 @@ urlpatterns = patterns('',
     # View for using PayPal as a payment method
     url(r'^payment/', views.RedirectView.as_view(as_payment_method=True),
         name='paypal-direct-payment'),
-)
+]

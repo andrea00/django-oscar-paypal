@@ -2,6 +2,8 @@
 *.py[oc]
 .DS_Store
 .cache/
+.idea/
+
 
 # Packaging
 dist

@@ -19,6 +19,7 @@ from oscar.apps.payment.exceptions import UnableToTakePayment
 from oscar.core.exceptions import ModuleNotFoundError
 from oscar.core.loading import get_class, get_model
 from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
+from oscar.apps.address.models import UserAddress
 
 from paypal.express.facade import (
     get_paypal_url, fetch_transaction_details, confirm_transaction)
@@ -218,7 +219,14 @@ class SuccessResponseView(PaymentDetailsView):
             "Basket #%s - showing preview with payer ID %s and token %s",
             kwargs['basket'].id, self.payer_id, self.token)
 
-        return super(SuccessResponseView, self).get(request, *args, **kwargs)
+        basket = self.load_frozen_basket(kwargs['basket_id'])
+        if not basket:
+            messages.error(self.request, error_msg)
+            return HttpResponseRedirect(reverse('basket:summary'))
+
+        submission = self.build_submission(basket=basket)
+        return self.submit(**submission)
+#        return super(SuccessResponseView, self).get(request, *args, **kwargs)
 
     def load_frozen_basket(self, basket_id):
         # Lookup the frozen basket that this txn corresponds to
@@ -291,7 +299,8 @@ class SuccessResponseView(PaymentDetailsView):
         submission = super(
             SuccessResponseView, self).build_submission(**kwargs)
         # Pass the user email so it can be stored with the order
-        submission['order_kwargs']['guest_email'] = self.txn.value('EMAIL')
+                
+        #submission['order_kwargs']['guest_email'] = submission['user'].email#self.txn.value('EMAIL')
         # Pass PP params
         submission['payment_kwargs']['payer_id'] = self.payer_id
         submission['payment_kwargs']['token'] = self.token
@@ -339,6 +348,31 @@ class SuccessResponseView(PaymentDetailsView):
         elif len(parts) > 1:
             first_name = parts[0]
             last_name = " ".join(parts[1:])
+
+        #MODIFY modifica indirizzo
+        addr_data = self.checkout_session.new_shipping_address_fields()
+        if addr_data:
+            # Load address data into a blank shipping address model
+            return ShippingAddress(**addr_data)
+        addr_id = self.checkout_session.shipping_user_address_id()
+        if addr_id:
+            try:
+                address = UserAddress._default_manager.get(pk=addr_id)
+            except UserAddress.DoesNotExist:
+                # An address was selected but now it has disappeared.  This can
+                # happen if the customer flushes their address book midway
+                # through checkout.  No idea why they would do this but it can
+                # happen.  Checkouts are highly vulnerable to race conditions
+                # like this.
+                return None
+            else:
+                # Copy user address data into a blank shipping address instance
+                shipping_addr = ShippingAddress()
+                address.populate_alternative_model(shipping_addr)
+        return shipping_addr
+
+
+
         return ShippingAddress(
             first_name=first_name,
             last_name=last_name,
