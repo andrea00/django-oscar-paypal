@@ -22,6 +22,8 @@ from oscar.core.loading import get_class, get_model
 from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
 from oscar.core.compat import user_is_authenticated
 
+from home.views import send_email_to_admin
+
 from paypal.express.facade import (
     get_paypal_url, fetch_transaction_details, confirm_transaction)
 from paypal.express.exceptions import (
@@ -41,6 +43,7 @@ ShippingAddress = get_model('order', 'ShippingAddress')
 UserAddress = get_model('address', 'UserAddress')
 Country = get_model('address', 'Country')
 Basket = get_model('basket', 'Basket')
+Order = get_model('order', 'Order')
 Repository = get_class('shipping.repository', 'Repository')
 Selector = get_class('partner.strategy', 'Selector')
 Source = get_model('payment', 'Source')
@@ -293,13 +296,23 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
         isn't necessarily the correct one to use in placing the order.  This
         can happen when a basket gets frozen.
         """
-        order = self.place_order(
-            order_number=order_number, user=user, basket=basket,
-            shipping_address=shipping_address, shipping_method=shipping_method,
-            shipping_charge=shipping_charge, order_total=order_total,
-            billing_address=billing_address, **kwargs)
+        order = Order.objects.filter(number=order_number)
+        if order:
+            try:
+                order = order[0]
+            except:
+                order = None
+        if not order:
+            order = self.place_order(
+                order_number=order_number, user=user, basket=basket,
+                shipping_address=shipping_address, shipping_method=shipping_method,
+                shipping_charge=shipping_charge, order_total=order_total,
+                billing_address=billing_address, **kwargs)
+
         #basket.submit()
         #self.checkout_session.flush()
+        if getattr(settings, 'ORDER_EMAIL_ALWAYS', False):
+            send_email_to_admin(order, order=True)
         self.request.session['checkout_order_id'] = order.id
         #return self.handle_successful_order(order)
 
