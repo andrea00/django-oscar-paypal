@@ -58,7 +58,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
     # Setting to distinguish if the site has already collected a shipping
     # address.  This is False when redirecting to PayPal straight from the
     # basket page but True when redirecting from checkout.
-    as_payment_method = False
+    as_payment_method = True
 
     def get_redirect_url(self, **kwargs):
         try:
@@ -147,6 +147,22 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
         Return any additional PayPal parameters
         """
         return {}
+
+    def create_shipping_address(self, user, shipping_address):
+        """
+        Create and return the shipping address for the current order.
+        Compared to self.get_shipping_address(), ShippingAddress is saved and
+        makes sure that appropriate UserAddress exists.
+        """
+        # For an order that only contains items that don't require shipping we
+        # won't have a shipping address, so we have to check for it.
+        if not shipping_address:
+            return None
+        shipping_address.save()
+        if user.is_authenticated():
+            self.update_address_book(user, shipping_address)
+
+        return shipping_address
 
 
 class CancelResponseView(RedirectView):
