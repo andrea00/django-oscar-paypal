@@ -20,7 +20,6 @@ from oscar.apps.payment.exceptions import UnableToTakePayment
 from oscar.core.exceptions import ModuleNotFoundError
 from oscar.core.loading import get_class, get_model
 from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
-from oscar.core.compat import user_is_authenticated
 
 from home.views import send_email_to_admin
 
@@ -382,7 +381,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
         if not shipping_address:
             return None
         shipping_address.save()
-        if user_is_authenticated(user):
+        if user.is_authenticated():
             self.update_address_book(user, shipping_address)
 
         return shipping_address
