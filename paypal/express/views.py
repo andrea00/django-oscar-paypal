@@ -21,7 +21,7 @@ from oscar.core.exceptions import ModuleNotFoundError
 from oscar.core.loading import get_class, get_model
 from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
 
-from home.views import send_email_to_admin
+from home.utils import send_email_to_admin
 
 from paypal.express.facade import (
     get_paypal_url, fetch_transaction_details, confirm_transaction)
@@ -313,7 +313,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
         #basket.submit()
         #self.checkout_session.flush()
         if getattr(settings, 'ORDER_EMAIL_ALWAYS', False):
-            send_email_to_admin(order, order=True)
+            send_email_to_admin(order, ordine=True)
         self.request.session['checkout_order_id'] = order.id
         #return self.handle_successful_order(order)
 
