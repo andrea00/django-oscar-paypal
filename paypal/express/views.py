@@ -138,10 +138,10 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
             # Maik doubts that this code ever worked. Assigning
             # shipping method instances to Paypal params
             # isn't going to work, is it?
-            # shipping_methods = Repository().get_shipping_methods(
-            #     user=user, basket=basket, request=self.request)
-            # params['shipping_methods'] = shipping_methods
-            params['shipping_method'] = shipping_method
+            shipping_methods = Repository().get_shipping_methods(
+                user=user, basket=basket, request=self.request)
+            params['shipping_methods'] = shipping_methods
+            # params['shipping_method'] = shipping_method
             params['shipping_methods'] = []           
 
         if settings.DEBUG:
