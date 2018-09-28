@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.conf.urls.i18n import i18n_patterns
 from django.conf import settings
 from django.contrib import admin
@@ -11,11 +11,11 @@ from paypal.express.dashboard.app import application as express_dashboard
 
 admin.autodiscover()
 
-urlpatterns = patterns(
+urlpatterns = [
     '',
     (r'^admin/', include(admin.site.urls)),
     url(r'^i18n/', include('django.conf.urls.i18n')),
-)
+]
 urlpatterns += i18n_patterns('',
     # PayPal Express integration...
     (r'^checkout/paypal/', include('paypal.express.urls')),
