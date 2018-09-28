@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
-from django.url import reverse
+from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.utils import six

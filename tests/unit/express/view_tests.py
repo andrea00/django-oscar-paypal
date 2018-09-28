@@ -6,7 +6,7 @@ from decimal import Decimal as D
 from django.test import TestCase
 from django.test.client import Client
 from django.utils.encoding import force_text
-from django.url import reverse, NoReverseMatch
+from django.urls import reverse, NoReverseMatch
 from mock import patch, Mock
 
 from oscar.apps.order.models import Order
