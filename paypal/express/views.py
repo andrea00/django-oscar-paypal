@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
-from django.core.urlresolvers import reverse
+from django.url import reverse
 from django.http import HttpResponseRedirect
 from django.utils.http import urlencode
 from django.utils import six
@@ -139,9 +139,11 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
             # Maik doubts that this code ever worked. Assigning
             # shipping method instances to Paypal params
             # isn't going to work, is it?
-            shipping_methods = Repository().get_shipping_methods(
-                user=user, basket=basket, request=self.request)
-            params['shipping_methods'] = shipping_methods
+            # shipping_methods = Repository().get_shipping_methods(
+            #     user=user, basket=basket, request=self.request)
+            # params['shipping_methods'] = shipping_methods
+            params['shipping_method'] = shipping_method
+            params['shipping_methods'] = []           
 
         if settings.DEBUG:
             # Determine the localserver's hostname to use when
