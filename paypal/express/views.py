@@ -19,7 +19,6 @@ from oscar.apps.payment.exceptions import UnableToTakePayment
 from oscar.core.exceptions import ModuleNotFoundError
 from oscar.core.loading import get_class, get_model
 from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
-from oscar.apps.address.models import UserAddress
 
 from paypal.express.facade import (
     get_paypal_url, fetch_transaction_details, confirm_transaction)
@@ -33,6 +32,7 @@ PaymentDetailsView = get_class('checkout.views', 'PaymentDetailsView')
 CheckoutSessionMixin = get_class('checkout.session', 'CheckoutSessionMixin')
 
 ShippingAddress = get_model('order', 'ShippingAddress')
+UserAddress = get_model('address', 'UserAddress')
 Country = get_model('address', 'Country')
 Basket = get_model('basket', 'Basket')
 Repository = get_class('shipping.repository', 'Repository')
