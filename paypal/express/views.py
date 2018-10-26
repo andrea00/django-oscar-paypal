@@ -135,7 +135,8 @@ class CustomOrderFunction(object):
             # the basket in the session so that we know which basket to thaw if we
             # get an unsuccessful payment response when redirecting to a 3rd party
             # site.
-            basket.freeze()
+            if self.payment_view:
+                basket.freeze()
             self.checkout_session.set_submitted_basket(basket)
             # We define a general error message for when an unanticipated payment
             # error occurs.
@@ -313,7 +314,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView, CustomOrderFunction):
             # Transaction successfully registered with PayPal.  Now freeze the
             # basket so it can't be edited while the customer is on the PayPal
             # site.
-            basket.freeze()
+            #basket.freeze()
 
             logger.info("Basket #%s - redirecting to %s", basket.id, url)
 
@@ -436,23 +437,35 @@ class SuccessResponseView(CustomOrderFunction, PaymentDetailsView):
             return HttpResponseRedirect(reverse('basket:summary'))
 
         # Reload frozen basket which is specified in the URL
-        kwargs['basket'] = self.load_frozen_basket(kwargs['basket_id'])
-        if not kwargs['basket']:
-            logger.warning(
-                "Unable to load frozen basket with ID %s", kwargs['basket_id'])
-            messages.error(
-                self.request,
-                _("No basket was found that corresponds to your "
-                  "PayPal transaction"))
-            return HttpResponseRedirect(reverse('basket:summary'))
+        # kwargs['basket'] = self.load_frozen_basket(kwargs['basket_id'])
+        # if not kwargs['basket']:
+        #     kwargs['basket'] = request.basket
+        #     if not kwargs['basket']:
+        #         logger.warning(
+        #             "Unable to load frozen basket with ID %s", kwargs['basket_id'])
+        #         messages.error(
+        #             self.request,
+        #             _("No basket was found that corresponds to your "
+        #               "PayPal transaction"))
+        #         return HttpResponseRedirect(reverse('basket:summary'))
 
-        logger.info(
-            "Basket #%s - showing preview with payer ID %s and token %s",
-            kwargs['basket'].id, self.payer_id, self.token)
+        # logger.info(
+        #     "Basket #%s - showing preview with payer ID %s and token %s",
+        #     kwargs['basket'].id, self.payer_id, self.token)
 
-        basket = self.load_frozen_basket(kwargs['basket_id'])
+        # basket = self.load_frozen_basket(kwargs['basket_id'])
+        # if not basket:
+        #     basket = request.basket
+        basket = Basket.objects.get(id=kwargs['basket_id'])
+        if Selector:
+            basket.strategy = Selector().strategy(request)
+
+        # Re-apply any offers
+        Applicator().apply(basket, request.user, request=request)
+
         if not basket:
-            messages.error(self.request, error_msg)
+            messages.error(self.request, _("No basket was found that corresponds to your "
+                                        "PayPal transaction"))
             return HttpResponseRedirect(reverse('basket:summary'))
 
         submission = self.build_submission(basket=basket)
