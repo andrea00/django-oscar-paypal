@@ -57,6 +57,15 @@ except ModuleNotFoundError:
 logger = logging.getLogger('paypal.express')
 
 
+def custom_update_stock_records(self, line):
+    # not allocate the produt if order pre-payment
+    if getattr(self, 'payment_view', ''):
+        if line.product.get_product_class().track_stock:
+            line.stockrecord.allocate(line.quantity)
+
+OrderCreator.update_stock_records = custom_update_stock_records
+
+
 class CustomOrderFunction(object):
 
     def create_shipping_address(self, user, shipping_address):
@@ -260,12 +269,6 @@ class CustomOrderFunction(object):
             except Exception, e:
                 print e
             user_addr.save()
-
-    def update_stock_records(self, line):
-        # not allocate the produt if order pre-payment
-        if self.payment_view:
-            if line.product.get_product_class().track_stock:
-                line.stockrecord.allocate(line.quantity)
 
 
 class RedirectView(CheckoutSessionMixin, RedirectView, CustomOrderFunction):
