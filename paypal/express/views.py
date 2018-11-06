@@ -127,6 +127,9 @@ class CustomOrderFunction(object):
             assert shipping_charge.is_tax_known, (
                 "Shipping charge tax must be set before a user can place an order")
 
+
+            # Re-apply any offers
+            Applicator().apply(basket, self.request.user, request=self.request)
             # Se esiste già un ordine lo prendo e lo cancello per ricreare i nuovi dati
             basket_order = basket.order_set.first()
             print basket_order
