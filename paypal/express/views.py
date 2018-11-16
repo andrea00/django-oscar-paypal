@@ -37,7 +37,8 @@ except:
 CheckoutSessionMixin = get_class('checkout.session', 'CheckoutSessionMixin')
 UnableToPlaceOrder = get_class('order.exceptions', 'UnableToPlaceOrder')
 OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
-OrderCreator = get_class('order.utils', 'OrderCreator') 
+OrderCreator = get_class('order.utils', 'OrderCreator')
+OrderDiscount = get_model('order', 'OrderDiscount')
 
 ShippingAddress = get_model('order', 'ShippingAddress')
 BillingAddress = get_model('order', 'BillingAddress') 
@@ -62,8 +63,56 @@ def custom_update_stock_records(self, line):
     if getattr(self, 'payment_view', ''):
         if line.product.get_product_class().track_stock:
             line.stockrecord.allocate(line.quantity)
-
 OrderCreator.update_stock_records = custom_update_stock_records
+
+# salvo l'utilizzo del voucher come effettutato solo se il pagamento è avvenuto
+def custom_record_voucher_usage(self, order, voucher, user):
+    try:
+        if order.sources.first().source_type:
+            voucher.record_usage(order, user)
+            print 'custom_record_voucher_usage'
+    except:
+        pass
+OrderCreator.record_voucher_usage = custom_record_voucher_usage
+
+def custom_create_discount_model(self, order, discount):
+    try:
+        if order.sources.first().source_type:
+            """
+            Create an order discount model for each offer application attached to
+            the basket.
+            """
+            order_discount = OrderDiscount(
+                order=order,
+                message=discount['message'] or '',
+                offer_id=discount['offer'].id,
+                frequency=discount['freq'],
+                amount=discount['discount'])
+            result = discount['result']
+            if result.affects_shipping:
+                order_discount.category = OrderDiscount.SHIPPING
+            elif result.affects_post_order:
+                order_discount.category = OrderDiscount.DEFERRED
+            voucher = discount.get('voucher', None)
+            if voucher:
+                order_discount.voucher_id = voucher.id
+                order_discount.voucher_code = voucher.code
+            order_discount.save()
+            print 'custom_create_discount_model'
+    except Exception, e:
+        print e
+OrderCreator.create_discount_model = custom_create_discount_model
+
+def custom_record_discount(self, discount, order=None):
+    try:
+        if order.sources.first().source_type:
+            discount['offer'].record_usage(discount)
+            if 'voucher' in discount and discount['voucher']:
+                discount['voucher'].record_discount(discount)
+                print 'custom_record_discount'
+    except Exception, e:
+        print e
+OrderCreator.record_discount = custom_record_discount
 
 
 class CustomOrderFunction(object):
@@ -127,9 +176,6 @@ class CustomOrderFunction(object):
             assert shipping_charge.is_tax_known, (
                 "Shipping charge tax must be set before a user can place an order")
 
-
-            # Re-apply any offers
-            Applicator().apply(basket, self.request.user, request=self.request)
             # Se esiste già un ordine lo prendo e lo cancello per ricreare i nuovi dati
             basket_order = basket.order_set.first()
             print basket_order
@@ -226,6 +272,9 @@ class CustomOrderFunction(object):
         else:
             request = kwargs.pop('request')
         print kwargs
+        print 'place orderrrrrrrrr'
+        applications = basket.offer_applications
+        print applications
         order = OrderCreator().place_order(
             user=user,
             order_number=order_number,
@@ -239,6 +288,15 @@ class CustomOrderFunction(object):
             #request=request,
             **kwargs)
         self.save_payment_sources(order)
+
+        oc = OrderCreator()
+        for application in applications:
+            print application
+            oc.create_discount_model(order, application)
+            oc.record_discount(application, order)
+        for voucher in basket.vouchers.all():
+            oc.record_voucher_usage(order, voucher, user)
+
         return order
 
     def save_payment_sources(self, order):
